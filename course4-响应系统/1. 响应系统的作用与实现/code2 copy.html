@@ -1,0 +1,36 @@
+<body></body>
+<script>
+
+
+// 存储副作用函数的桶
+const bucket = new Set()
+// 原始数据 没有响应性
+const data = { text: 'hello world' }
+
+
+// 对原始数据的代理
+const proxy = new Proxy(data, {
+  get(target, key) {
+    bucket.add(effect)
+    return target[key]
+  },
+  set(target,key,value) {
+    target[key] = value
+    bucket.forEach(fn => fn())
+    return true
+  }
+})
+
+// 副作用函数
+const effect = () => {
+  document.body.innerText = proxy.text
+}
+
+// 相当于模板中读取数据，收集相关的副作用函数
+effect()
+
+setTimeout(() => {
+  proxy.text = 'hello vue3'
+}, 2000)
+
+</script>

@@ -1,0 +1,39 @@
+<body></body>
+<script>
+// 解决固定副作用函数的名称问题
+
+// 存储副作用函数的桶
+const bucket = new Set()
+// 原始数据
+const data = { text: 'hello world' }
+// 对原始数据的代理
+const proxy = new Proxy(data, {
+  get(target, key) {
+    bucket.add(activeEffect)
+    return target[key]
+  },
+  set(target, key, newVal) {
+    target[key] = newVal
+    bucket.forEach(fn => fn())
+    return true
+  }
+})
+
+// 用一个全局变量存储当前激活的 effect 函数
+let activeEffect
+function effect(fn) {
+  activeEffect = fn
+  fn()
+}
+
+effect(() => {
+  document.body.innerText = proxy.text
+})
+
+setTimeout(() => {
+  proxy.text = 'hello vue3'
+}, 2000)
+
+
+
+</script>

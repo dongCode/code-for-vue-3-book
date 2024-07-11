@@ -1,0 +1,51 @@
+<body></body>
+<script>
+// target 对象作为键值
+// 存储副作用函数的桶  target -> key -> fn
+const bucket = new WeakMap()
+
+
+// 原始数据
+const data = { foo: 1 , bar: 2}
+
+// 对原始数据的代理
+const proxy = new Proxy(data, {
+  get(target, key) {
+    if(!activeEffect) return
+    let depsMap = bucket.get(target)
+    // obj as key link to a map -> key as the map key -> set -> effect function 
+    if(depsMap === undefined) {
+      bucket.set(target, new Map())
+      depsMap = bucket.get(target)
+      depsMap.set(key, new Set())
+    }
+    depsMap.get(key).add(activeEffect)
+    return target[key]
+  },
+  set(target, key, newVal) {
+    target[key] = newVal
+    const depsMap = bucket.get(target)
+    const deps = depsMap.get(key)
+    if(deps) {
+      deps.forEach(fn => fn())
+    }
+    return true
+  }
+})
+
+// 用一个全局变量存储当前激活的 effect 函数
+let activeEffect
+function effect(fn) {
+  activeEffect = fn
+  fn()
+}
+
+effect(() => {
+  document.body.innerText = proxy.foo
+})
+
+setTimeout(() => {
+  proxy.foo = 'hello vue3'
+}, 2000)
+
+</script>
