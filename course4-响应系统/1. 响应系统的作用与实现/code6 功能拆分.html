@@ -1,0 +1,71 @@
+<body></body>
+<script>
+
+
+// 存储副作用函数的桶
+const bucket = new WeakMap()
+// 原始数据
+const data = { text: 'hello world' }
+// 对原始数据的代理
+const obj = new Proxy(data, {
+  // 拦截读取操作 抽离track跟踪依赖函数，保持get只做一件读取的事情
+  get(target, key) {
+    track(target, key) // 收集依赖effects
+    return target[key]
+  },
+  // 拦截设置操作 抽离trigger触发依赖函数，保持set只做一件读取的事情
+  set(target, key, newVal) {
+    target[key] = newVal
+    trigger(target, key) // 触发依赖effects
+  }
+})
+
+
+// 跟踪需要被依赖的key值
+function track(target, key) {
+    if(!activeEffect) return
+    let depsMap = bucket.get(target)
+    if(!depsMap) {
+       bucket.set(target,depsMap = new Map())
+    }
+    // set => 一个 key 对应一个 set  
+    let deps = depsMap.get(key)
+
+    // 模板中没有对相关值进行依赖
+    if(!deps) {
+       depsMap.set(key,deps = new Set())
+    }
+
+    deps.add(activeEffect)
+}
+
+function trigger(target, key) {
+    const depsMap = bucket.get(target)
+    // 没有被收集 说明没有相关的依赖
+    if(!depsMap) return
+
+    const effects = depsMap.get(key)
+
+    if(effects) effects.forEach(effectFn => effectFn())
+    
+  } 
+
+// 用一个全局变量存储当前激活的 effect 函数
+let activeEffect
+function effect(fn) {
+  // 当调用 effect 注册副作用函数时，将副作用函数复制给 activeEffect
+  activeEffect = fn
+  // 执行副作用函数
+  fn()
+}
+
+effect(() => {
+  console.log('effect run')
+  document.body.innerText = obj.text
+})
+
+setTimeout(() => {
+  obj.text = 'hello vue3'
+}, 1000)
+
+</script>

@@ -1,0 +1,86 @@
+<body></body>
+<script>
+
+
+// 存储副作用函数的桶
+const bucket = new WeakMap()
+// 原始数据
+const data = { text: 'ok',ok: true }
+// 对原始数据的代理
+const obj = new Proxy(data, {
+  // 拦截读取操作 抽离track跟踪依赖函数，保持get只做一件读取的事情
+  get(target, key) {
+    track(target, key) // 收集依赖effects
+    return target[key]
+  },
+  // 拦截设置操作 抽离trigger触发依赖函数，保持set只做一件读取的事情
+  set(target, key, newVal) {
+    target[key] = newVal
+    trigger(target, key) // 触发依赖effects
+  }
+})
+
+
+// 跟踪需要被依赖的key值
+function track(target, key) {
+    if(!activeEffect[index]) return
+    // 清楚上一次的依赖，避免重复收集
+    let depsMap = bucket.get(target)
+    bucket.set(target,depsMap = new Map())
+    let deps = depsMap.get(key)
+    depsMap.set(key,deps = new Set())
+    
+    deps.add(activeEffect[index])
+}
+
+
+// 每次收集前全部clear掉，去除多余不需要执行的副作用effect
+function cleanup(target, key) {
+    let depsMap = bucket.get(target)
+    if(!depsMap) return
+    let deps = depsMap.get(key)
+    deps && deps.clear()
+}
+
+function trigger(target, key) {
+    const depsMap = bucket.get(target)
+    // 没有被收集 说明没有相关的依赖
+    if(!depsMap) return
+
+    const effects = depsMap.get(key)
+
+    if(effects) effects.forEach(effectFn => effectFn())
+
+    
+  } 
+
+// 用一个全局变量存储当前激活的 effect 函数
+let activeEffect = []
+let index = 0
+function effect(fn) {
+  // 当调用 effect 注册副作用函数时，将副作用函数复制给 activeEffect
+  activeEffect[index] = fn
+  // 执行副作用函数
+  fn()
+  index++
+}
+
+
+// 当obj.ok为false时,obj.text改变不应该触发副作用函数，所以应该将其删除
+effect(() => {
+  console.log('effect run')
+  document.body.innerText = obj.ok ? obj.text : 'not ok'
+  effect(() => {
+    console.log('nested effect run')
+  })
+})
+
+setTimeout(() => {
+  obj.ok = false
+}, 1000)
+
+setTimeout(() => {
+  console.log('不应该执行effect副作用函数 effect run')
+  obj.text = '改变不应该执行effect副作用函数'
+}, 1000)
+</script>
