@@ -23,7 +23,7 @@ const obj = new Proxy(data, {
 
 // 跟踪需要被依赖的key值
 function track(target, key) {
-    if(!activeEffect[index]) return
+    if(!activeEffect) return
     let depsMap = bucket.get(target)
     if(!depsMap) {
        bucket.set(target,depsMap = new Map())
@@ -36,7 +36,7 @@ function track(target, key) {
        depsMap.set(key,deps = new Set())
     }
 
-    deps.add(activeEffect[index])
+    deps.add(activeEffect)
 }
 
 function trigger(target, key) {
@@ -51,26 +51,33 @@ function trigger(target, key) {
   } 
 
 // 用一个全局变量存储当前激活的 effect 函数
-let activeEffect = []
-let index = 0
+let activeEffect
+let activeStack = []
 function effect(fn) {
   // 当调用 effect 注册副作用函数时，将副作用函数复制给 activeEffect
-  activeEffect[index] = fn
+  activeEffect = fn
+  activeStack.push(fn)
   // 执行副作用函数
   fn()
-  index++
+  activeStack.pop()
+  activeEffect = activeStack[activeStack.length - 1]
 }
 
-effect(() => {
-  console.log('effect run')
-  document.body.innerText = obj.text
-  effect(() => {
-    console.log('nested effect run')
+
+let temp1, temp2
+
+effect(function effectFn1() {
+  console.log('effectFn1 执行')
+  effect(function effectFn2() {
+    console.log('effectFn2 执行')
+    temp2 = obj.bar
   })
+  temp1 = obj.foo
 })
 
 setTimeout(() => {
-  obj.text = 'hello vue3'
-}, 1000)
+  obj.foo = false
+}, 1000);
+
 
 </script>

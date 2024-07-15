@@ -88,13 +88,12 @@ function cleanup(effectFn) {
 let temp1, temp2
 
 effect(function effectFn1() {
-    temp1 = obj.foo
-
   console.log('effectFn1 执行')
   effect(function effectFn2() {
     console.log('effectFn2 执行')
     temp2 = obj.bar
   })
+  temp1 = obj.foo
 })
 
 setTimeout(() => {
