@@ -40,12 +40,12 @@ function track(target, key) {
 }
 
 const jobQueue = new Set()
-const p = Promise.resolve()
+const resolvedPromise = Promise.resolve()
 let isFlushing = false
 function flushJob() {
   if(isFlushing) return
   isFlushing = true
-  p.then(() => {
+  resolvedPromise.then(() => {
     jobQueue.forEach(job => job())
   }).finally(() => {
     isFlushing = false
