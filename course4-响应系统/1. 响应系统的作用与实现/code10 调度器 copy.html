@@ -26,6 +26,7 @@ const obj = new Proxy(data, {
 })
 
 function track(target, key) {
+  if(!activeEffect) return
   let depsMap = bucket.get(target)
   if (!depsMap) {
     bucket.set(target, (depsMap = new Map()))
@@ -51,10 +52,13 @@ function trigger(target, key) {
     }
   })
   effectsToRun.forEach(effectFn => {
-       effectFn()
+      if(effectFn.options.scheduler) {
+        effectFn.options.scheduler(effectFn)
+      } else {
+         effectFn()
+      }
      
   })
-  // effects && effects.forEach(effectFn => effectFn())
 }
 
 // 用一个全局变量存储当前激活的 effect 函数
@@ -62,7 +66,7 @@ let activeEffect
 // effect 栈
 const effectStack = []
 
-function effect(fn) {
+function effect(fn, options = {}) {
   const effectFn = () => {
     cleanup(effectFn)
     // 当调用 effect 注册副作用函数时，将副作用函数复制给 activeEffect
@@ -74,6 +78,7 @@ function effect(fn) {
     effectStack.pop()
     activeEffect = effectStack[effectStack.length - 1]
   }
+  effectFn.options = options
   // activeEffect.deps 用来存储所有与该副作用函数相关的依赖集合
   effectFn.deps = []
   // 执行副作用函数
@@ -89,17 +94,17 @@ function cleanup(effectFn) {
 }
 
 
-
-
-// =========================
-
-let temp1, temp2
-
 effect(function effectFn1() {
-    obj.a++
+   console.log('effectFn1 执行', obj.a)
+}, {
+  scheduler(fn) {
+    setTimeout(fn, 1000)
+  }
 })
 
+obj.a++
 
+console.log('提前执行了')
 
 
 </script>
